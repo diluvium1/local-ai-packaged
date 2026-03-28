@@ -5,10 +5,19 @@ quickly bootstraps a fully featured Local AI and Low Code development
 environment including Ollama for your local LLMs, Open WebUI for an interface to chat with your N8N agents, and Supabase for your database, vector store, and authentication. 
 
 This is Cole's version with a couple of improvements and the addition of Supabase, Open WebUI, Flowise, Neo4j, Langfuse, SearXNG, and Caddy!
-Also, the local RAG AI Agent workflows from the video will be automatically in your 
-n8n instance if you use this setup instead of the base one provided by n8n!
+Pre-built RAG AI Agent workflows from the video are included in `n8n/backup/workflows/` - see [Importing Starter Workflows](#importing-starter-workflows) for setup instructions.
 
 **IMPORANT**: Supabase has updated a couple environment variables so you may have to add some new default values in your .env that I have in my .env.example if you have had this project up and running already and are just pulling new changes. Specifically, you need to add "POOLER_DB_POOL_SIZE=5" to your .env. This is required if you have had the package running before June 14th.
+
+**February 26th, 2026 Update**: The latest Supabase storage container (`storage-api v1.37.8`) now requires several new environment variables. If you have already been running the Local AI Package and are pulling new changes, you need to add the following to your `.env` file:
+```bash
+GLOBAL_S3_BUCKET=stub
+REGION=stub
+STORAGE_TENANT_ID=stub
+S3_PROTOCOL_ACCESS_KEY_ID=625729a08b95bf1b7ff351a663f3a23c
+S3_PROTOCOL_ACCESS_KEY_SECRET=850181e4652dd023b7a98c58ae0d2d34bd487ee0cc3254aed6eda37307425907
+```
+These are already included in the `.env.example`, so if you are setting up for the first time you just need to copy them over. The `stub` values work fine for local file-based storage. Without these variables, the Supabase storage container will crash on startup with a "Region is missing" error.
 
 ## Important Links
 
@@ -141,7 +150,7 @@ python start_services.py --profile gpu-nvidia
 
 > [!NOTE]
 > If you have not used your Nvidia GPU with Docker before, please follow the
-> [Ollama Docker instructions](https://github.com/ollama/ollama/blob/main/docs/docker.md).
+> [Ollama Docker instructions](https://github.com/ollama/ollama/blob/main/docs/docker.mdx).
 
 ### For AMD GPU users on Linux
 
@@ -243,6 +252,19 @@ to the IP address of your cloud instance.
 - sudo mkdir -p /usr/local/lib/docker/cli-plugins
 - sudo ln -s /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
+## Importing Starter Workflows
+
+This package includes pre-built n8n workflows in the `n8n/backup/workflows/` folder. To import them:
+
+1. Open n8n at <http://localhost:5678/> (or your custom domain if deployed to the cloud)
+2. Go to your workflow list and click the three-dot menu or use **Import from File**
+3. Select the JSON files from the `n8n/backup/workflows/` folder on your local machine
+
+For detailed instructions, see the [official n8n import/export documentation](https://docs.n8n.io/workflows/export-import/).
+
+> [!NOTE]
+> You'll need to create credentials for each workflow after importing. See step 3 in Quick Start below.
+
 ## ⚡️ Quick start and usage
 
 The main component of the self-hosted AI starter kit is a docker compose file
@@ -253,8 +275,7 @@ to get started.
 1. Open <http://localhost:5678/> in your browser to set up n8n. You’ll only
    have to do this once. You are NOT creating an account with n8n in the setup here,
    it is only a local account for your instance!
-2. Open the included workflow:
-   <http://localhost:5678/workflow/vTN9y2dLXqTiDfPT>
+2. Import a workflow from `n8n/backup/workflows/` (see [Importing Starter Workflows](#importing-starter-workflows)), then open it from your workflow list.
 3. Create credentials for every service:
    
    Ollama URL: http://ollama:11434
@@ -347,6 +368,10 @@ Here are solutions to common issues you might encounter:
 
 - **Linux GPU Support**: If you're having trouble running Ollama with GPU support on Linux, follow the [Ollama Docker instructions](https://github.com/ollama/ollama/blob/main/docs/docker.md).
 
+### n8n Node Issues
+
+- **Local File Trigger or Execute Command nodes not available**: Starting with n8n v2+, these nodes are disabled by default for security. To enable them, uncomment `NODES_EXCLUDE=[]` in the `x-n8n` section of `docker-compose.yml` and restart n8n. See [Accessing local files](#accessing-local-files) for detailed instructions.
+
 ## 👓 Recommended reading
 
 n8n is full of useful content for getting started quickly with its AI concepts
@@ -400,6 +425,26 @@ interact with the local filesystem.
 - [Read/Write Files from Disk](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.filesreadwrite/)
 - [Local File Trigger](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.localfiletrigger/)
 - [Execute Command](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executecommand/)
+
+**Enabling Local File Trigger and Execute Command nodes**
+
+Starting with n8n v2+, the `Local File Trigger` and `Execute Command` nodes are disabled by default for security reasons. To enable them in this local/self-hosted environment:
+
+1. Open `docker-compose.yml`
+2. Find the `x-n8n` section and uncomment the `NODES_EXCLUDE` line:
+   ```yaml
+   x-n8n: &service-n8n
+     image: n8nio/n8n:latest
+     environment:
+       # ... other variables ...
+       - NODES_EXCLUDE=[]
+   ```
+3. Restart the n8n container:
+   ```bash
+   docker compose -p localai -f docker-compose.yml --profile <your-profile> up -d n8n
+   ```
+
+See [n8n 2.0 Breaking Changes](https://docs.n8n.io/2-0-breaking-changes/#disable-executecommand-and-localfiletrigger-nodes-by-default) for more details.
 
 ## 📜 License
 
